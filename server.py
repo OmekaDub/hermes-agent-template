@@ -400,7 +400,7 @@ async def login_post(request: Request) -> Response:
             _make_auth_token(),
             max_age=COOKIE_MAX_AGE,
             httponly=True,
-            samesite="lax",
+            samesite="none"; Secure=true,
             path="/",
         )
         return resp
