@@ -1,5 +1,4 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-
 # Which hermes-agent revision to install. Accepts any git ref the upstream
 # repo publishes — a release tag (recommended for reproducibility) or a
 # branch name (`main`) for bleeding edge.
@@ -9,7 +8,6 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 # below. Use `main` only if you accept that every rebuild can pull arbitrary
 # new upstream commits.
 ARG HERMES_REF=v2026.5.7
-
 # tini = tiny init that we run as PID 1. Without it, hermes's grandchild
 # processes (MCP stdio servers, git, bun, browser daemons spawned by tools)
 # reparent to PID 1 when their parents exit and pile up as zombies. After
@@ -24,9 +22,11 @@ ARG HERMES_REF=v2026.5.7
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl ca-certificates git tini && \
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs && \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends nodejs gh && \
     rm -rf /var/lib/apt/lists/*
-
 # Install hermes-agent (provides the `hermes` CLI) and pre-build its React
 # dashboard so `hermes dashboard` has nothing to build at runtime.
 # Deleting web/ afterwards makes hermes's internal _build_web_ui skip the
@@ -42,7 +42,6 @@ RUN git clone --depth 1 --branch ${HERMES_REF} https://github.com/NousResearch/h
     npm install --silent --no-fund --no-audit --progress=false && \
     npm run build && \
     rm -rf /opt/hermes-agent/web /opt/hermes-agent/.git /root/.npm
-
 # Why pre-build ui-tui (and why we don't delete it after):
 # - The dashboard's embedded Chat tab spawns `node ui-tui/dist/entry.js`
 #   on every WebSocket connect to /api/pty.
@@ -55,20 +54,15 @@ RUN git clone --depth 1 --branch ${HERMES_REF} https://github.com/NousResearch/h
 #   instead of at user request time.
 # - We keep ui-tui/ entirely (node_modules + dist + src) so hermes's
 #   freshness checks don't trigger a re-install at runtime.
-
 COPY requirements.txt /app/requirements.txt
 RUN uv pip install --system --no-cache -r /app/requirements.txt
-
 RUN mkdir -p /data/.hermes
-
 COPY server.py /app/server.py
 COPY templates/ /app/templates/
 COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh
-
 ENV HOME=/data
 ENV HERMES_HOME=/data/.hermes
-
 # tini wraps start.sh so it runs as PID 1's child instead of as PID 1 itself.
 # `-g` propagates signals to the whole process group so `docker stop` /
 # Railway's SIGTERM cleanly terminates the entire tree, not just start.sh.
