@@ -31,7 +31,7 @@ if [ -n "$GITHUB_TOKEN" ]; then
     echo "[startup] gh CLI authenticated as $(gh auth status --hostname github.com 2>&1 | grep 'Logged in' || echo 'auth failed')"
 fi
 
-# Set hua-nation as the default kanban board on every startup
+# Set hua-nation as the default kanban board on every startup for hua
 hermes kanban boards switch hua-nation 2>/dev/null || true
 
 exec python /app/server.py
