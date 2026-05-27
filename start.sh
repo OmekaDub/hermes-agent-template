@@ -32,6 +32,7 @@ if [ -n "$GITHUB_TOKEN" ]; then
     echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || true
     git config --global credential.helper store
     echo "https://${GITHUB_TOKEN}@github.com" > /root/.git-credentials
+    echo "https://${GITHUB_TOKEN}@github.com" > /data/.git-credentials
     echo "[startup] gh CLI authenticated as $(gh auth status --hostname github.com 2>&1 | grep 'Logged in' || echo 'auth failed')"
 fi
 
