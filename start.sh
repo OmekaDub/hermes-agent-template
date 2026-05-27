@@ -13,8 +13,12 @@ mkdir -p /data/.hermes/cron /data/.hermes/sessions /data/.hermes/logs \
          /data/mempalace/akumafit /data/mempalace/tmp-ai /data/mempalace/ideas \
          /data/mempalace/bid-writer
 
-if [ ! -f /data/.hermes/config.yaml ] && [ -f /opt/hermes-agent/cli-config.yaml.example ]; then
+if [ -f /data/.hermes/config.backup.yaml ]; then
+  cp /data/.hermes/config.backup.yaml /data/.hermes/config.yaml
+  echo "[startup] Config restored from backup"
+elif [ ! -f /data/.hermes/config.yaml ] && [ -f /opt/hermes-agent/cli-config.yaml.example ]; then
   cp /opt/hermes-agent/cli-config.yaml.example /data/.hermes/config.yaml
+  echo "[startup] Config seeded from example"
 fi
 
 [ ! -f /data/.hermes/.env ] && touch /data/.hermes/.env
