@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-
 # Mirror dashboard-ref-only's startup: create every directory hermes expects
 # and seed a default config.yaml if the volume is empty. Without these,
 # `hermes dashboard` endpoints that hit logs/, sessions/, cron/, etc. can fail
@@ -12,7 +11,6 @@ mkdir -p /data/.hermes/cron /data/.hermes/sessions /data/.hermes/logs \
          /data/mempalace/crew /data/mempalace/hua-nation /data/mempalace/builds \
          /data/mempalace/akumafit /data/mempalace/tmp-ai /data/mempalace/ideas \
          /data/mempalace/bid-writer
-
 if [ -f /data/.hermes/config.backup.yaml ]; then
   cp /data/.hermes/config.backup.yaml /data/.hermes/config.yaml
   echo "[startup] Config restored from backup"
@@ -20,23 +18,20 @@ elif [ ! -f /data/.hermes/config.yaml ] && [ -f /opt/hermes-agent/cli-config.yam
   cp /opt/hermes-agent/cli-config.yaml.example /data/.hermes/config.yaml
   echo "[startup] Config seeded from example"
 fi
-
 [ ! -f /data/.hermes/.env ] && touch /data/.hermes/.env
-
 # Clear any stale gateway PID file left over from the previous container.
 rm -f /data/.hermes/gateway.pid
-
 # Authenticate gh CLI with GitHub token so all workers and gateway processes
 # have GitHub access without needing to re-authenticate each session.
 if [ -n "$GITHUB_TOKEN" ]; then
     echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || true
-    git config --global credential.helper store
+    git config --global credential.helper "store --file /data/.git-credentials"
     echo "https://${GITHUB_TOKEN}@github.com" > /root/.git-credentials
     echo "https://${GITHUB_TOKEN}@github.com" > /data/.git-credentials
+    chmod 600 /data/.git-credentials
+    chmod 600 /root/.git-credentials
     echo "[startup] gh CLI authenticated as $(gh auth status --hostname github.com 2>&1 | grep 'Logged in' || echo 'auth failed')"
 fi
-
 # Set hua-nation as the default kanban board on every startup for hua
 hermes kanban boards switch hua-nation 2>/dev/null || true
-
 exec python /app/server.py
